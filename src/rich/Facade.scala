@@ -8,13 +8,6 @@ import scala.annotation.targetName
 // ====================================================================
 //                Opaque types, bridges, and rich.* helpers
 // ====================================================================
-//
-// Opaque types live inside a nested object so the rest of the package
-// (companions, extensions) sees them as opaque. If they were declared
-// directly in `package rich`, the alias would be transparent to
-// everything in the package — collapsing the 10 `asPy` overloads to
-// identical signatures and breaking extension dispatch the same way
-// inside-`np` dispatch breaks the numpy facade.
 
 object core:
   opaque type Console  = PyDynamic
@@ -77,12 +70,7 @@ export core.{
 @extern("rich")
 private object _mod extends PyDynamic
 
-// @targetName disambiguates these from the extension `print` on
-// `Console` etc., which lower to package-level methods with the same
-// erased signature.
-@targetName("richPrint1") def print(value: Any): Unit             = _mod.print(value)
-@targetName("richPrint2") def print(a: Any, b: Any): Unit         = _mod.print(a, b)
-@targetName("richPrint3") def print(a: Any, b: Any, c: Any): Unit = _mod.print(a, b, c)
+def print(value: Any): Unit             = _mod.print(value)
 def printJson(json: String): Unit        = _mod.print_json(json)
 def inspect(value: Any): Unit            = _mod.inspect(value)
 

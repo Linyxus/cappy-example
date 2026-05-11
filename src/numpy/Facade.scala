@@ -5,17 +5,6 @@
 // wrapper instance, no extra field to deref, no per-call allocation.
 // The opaqueness is purely a compile-time discipline that hides the raw
 // `PyDynamic` API and gives callers a typed surface.
-//
-// Why the extensions live OUTSIDE the `np` object:
-// inside the defining object the alias is transparent, so `a.foo` on
-// either static type can match an extension method on `NDArray` —
-// recursing forever instead of falling through to `PyDynamic`'s
-// `Dynamic` dispatch. Defining the extensions in a sibling scope makes
-// the alias opaque at the point where the bodies are checked, so
-// `a.py.foo(...)` goes through `selectDynamic` / `applyDynamic` exactly
-// like raw `PyDynamic`. The bridge is a pair of inline no-op casts on
-// `np`: `asPy: NDArray => PyDynamic` and `fromPy: PyDynamic => NDArray`,
-// each alias-transparent inside `np`.
 
 package numpy
 
