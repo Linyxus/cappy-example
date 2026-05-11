@@ -1,6 +1,6 @@
 # An Example of Cappy
 
-An example of the Python backend of Scala (named "Cappy").
+An example of the Python backend of Scala 3 (named "Cappy").
 
 ## Prerequisites
 
