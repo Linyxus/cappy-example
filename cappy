@@ -63,13 +63,15 @@ case "$cmd" in
       exit 1
     fi
 
-    # Compile the entry file together with every other .scala sibling in
-    # the same directory, so cross-file references (e.g. a facade module)
-    # resolve. The entry file determines the bundled output we run.
+    # Compile the entry file together with every other .scala file under
+    # the same directory tree, so cross-file references (e.g. a facade
+    # module in a subpackage) resolve. The entry file determines the
+    # bundled output we run.
     src_dir="$(cd "$(dirname "$src")" && pwd)"
-    shopt -s nullglob
-    sources=("$src_dir"/*.scala)
-    shopt -u nullglob
+    sources=()
+    while IFS= read -r -d '' f; do
+      sources+=("$f")
+    done < <(find "$src_dir" -type f -name '*.scala' -print0)
 
     mkdir -p "$CACHE_DIR"
     cs launch --channel "$SPC_CHANNEL" spc -- -scalapy -d "$CACHE_DIR" "${sources[@]}"

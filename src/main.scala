@@ -1,3 +1,6 @@
+import numpy.*
+import rich.*
+
 @main def run(): Unit =
   val con = Console()
 
@@ -35,14 +38,14 @@
   // ---- Tree of project sources.
   con.rule("Tree")
   val tree = Tree("[bold]cappy-example[/]")
-  val srcs = tree.add("[bold]sources[/]")
+  val srcs = tree.add("[bold]src/[/]")
   srcs.add("main.scala")
-  srcs.add("np-facade.scala")
-  srcs.add("rich-facade.scala")
+  val npDir = srcs.add("[bold]numpy/[/]")
+  npDir.add("Facade.scala")
+  val richDir = srcs.add("[bold]rich/[/]")
+  richDir.add("Facade.scala")
   val cache = tree.add("[bold].cappy-cache/[/]")
   cache.add("main.py")
-  cache.add("np-facade.py")
-  cache.add("rich-facade.py")
   con.print(tree)
 
   // ---- Markdown.

@@ -1,13 +1,22 @@
 // A typed Scala facade for Python's `rich` library.
 
+package rich
+
 import scala.python.*
 import scala.annotation.targetName
 
 // ====================================================================
 //                Opaque types, bridges, and rich.* helpers
 // ====================================================================
+//
+// Opaque types live inside a nested object so the rest of the package
+// (companions, extensions) sees them as opaque. If they were declared
+// directly in `package rich`, the alias would be transparent to
+// everything in the package — collapsing the 10 `asPy` overloads to
+// identical signatures and breaking extension dispatch the same way
+// inside-`np` dispatch breaks the numpy facade.
 
-object rich:
+object core:
   opaque type Console  = PyDynamic
   opaque type Text     = PyDynamic
   opaque type Panel    = PyDynamic
@@ -42,30 +51,40 @@ object rich:
   inline def syntaxFromPy  (d: PyDynamic): Syntax   = d
   inline def columnsFromPy (d: PyDynamic): Columns  = d
   inline def progressFromPy(d: PyDynamic): Progress = d
+end core
 
-  @extern("rich")
-  private object _mod extends PyDynamic
+// Public package-level aliases. Opaque to outside callers because
+// `core.Console` is opaque outside `object core`.
+type Console  = core.Console
+type Text     = core.Text
+type Panel    = core.Panel
+type Table    = core.Table
+type Tree     = core.Tree
+type Rule     = core.Rule
+type Markdown = core.Markdown
+type Syntax   = core.Syntax
+type Columns  = core.Columns
+type Progress = core.Progress
 
-  def print(value: Any): Unit              = _mod.print(value)
-  def print(a: Any, b: Any): Unit          = _mod.print(a, b)
-  def print(a: Any, b: Any, c: Any): Unit  = _mod.print(a, b, c)
-  def printJson(json: String): Unit        = _mod.print_json(json)
-  def inspect(value: Any): Unit            = _mod.inspect(value)
+// Re-export bridges so companions and extensions in this package can
+// call `asPy(...)` / `consoleFromPy(...)` unqualified.
+export core.asPy
+export core.{
+  consoleFromPy, textFromPy, panelFromPy, tableFromPy, treeFromPy,
+  ruleFromPy, markdownFromPy, syntaxFromPy, columnsFromPy, progressFromPy
+}
 
-end rich
+@extern("rich")
+private object _mod extends PyDynamic
 
-// Top-level aliases so user code can write `Panel`, `Table`, etc.
-// without the `rich.` prefix.
-type Console  = rich.Console
-type Text     = rich.Text
-type Panel    = rich.Panel
-type Table    = rich.Table
-type Tree     = rich.Tree
-type Rule     = rich.Rule
-type Markdown = rich.Markdown
-type Syntax   = rich.Syntax
-type Columns  = rich.Columns
-type Progress = rich.Progress
+// @targetName disambiguates these from the extension `print` on
+// `Console` etc., which lower to package-level methods with the same
+// erased signature.
+@targetName("richPrint1") def print(value: Any): Unit             = _mod.print(value)
+@targetName("richPrint2") def print(a: Any, b: Any): Unit         = _mod.print(a, b)
+@targetName("richPrint3") def print(a: Any, b: Any, c: Any): Unit = _mod.print(a, b, c)
+def printJson(json: String): Unit        = _mod.print_json(json)
+def inspect(value: Any): Unit            = _mod.inspect(value)
 
 // ====================================================================
 //                              Console
@@ -75,28 +94,28 @@ type Progress = rich.Progress
 private object _richConsole extends PyDynamic
 
 object Console:
-  def apply(): Console = rich.consoleFromPy(_richConsole.Console())
+  def apply(): Console = consoleFromPy(_richConsole.Console())
   /** A console that records output for later `exportText` / `exportHtml`. */
   def recording(): Console =
-    rich.consoleFromPy(_richConsole.Console(record = true))
+    consoleFromPy(_richConsole.Console(record = true))
   def recording(width: Int): Console =
-    rich.consoleFromPy(_richConsole.Console(record = true, width = width))
+    consoleFromPy(_richConsole.Console(record = true, width = width))
 
 extension (c: Console)
-  def print(value: Any): Unit                     = rich.asPy(c).print(value)
-  def print(a: Any, b: Any): Unit                 = rich.asPy(c).print(a, b)
-  def print(a: Any, b: Any, d: Any): Unit         = rich.asPy(c).print(a, b, d)
-  def log(value: Any): Unit                       = rich.asPy(c).log(value)
-  def rule(title: String): Unit                   = rich.asPy(c).rule(title)
+  def print(value: Any): Unit                     = asPy(c).print(value)
+  def print(a: Any, b: Any): Unit                 = asPy(c).print(a, b)
+  def print(a: Any, b: Any, d: Any): Unit         = asPy(c).print(a, b, d)
+  def log(value: Any): Unit                       = asPy(c).log(value)
+  def rule(title: String): Unit                   = asPy(c).rule(title)
   def ruleStyled(title: String, style: String): Unit =
-    rich.asPy(c).rule(title, style = style)
-  def line(): Unit                                = rich.asPy(c).line()
-  def line(count: Int): Unit                      = rich.asPy(c).line(count)
-  def clear(): Unit                               = rich.asPy(c).clear()
-  def bell(): Unit                                = rich.asPy(c).bell()
-  def input(prompt: String): String               = rich.asPy(c).input(prompt).asInstanceOf[String]
-  def exportText(): String                        = rich.asPy(c).export_text().asInstanceOf[String]
-  def exportHtml(): String                        = rich.asPy(c).export_html().asInstanceOf[String]
+    asPy(c).rule(title, style = style)
+  def line(): Unit                                = asPy(c).line()
+  def line(count: Int): Unit                      = asPy(c).line(count)
+  def clear(): Unit                               = asPy(c).clear()
+  def bell(): Unit                                = asPy(c).bell()
+  def input(prompt: String): String               = asPy(c).input(prompt).asInstanceOf[String]
+  def exportText(): String                        = asPy(c).export_text().asInstanceOf[String]
+  def exportHtml(): String                        = asPy(c).export_html().asInstanceOf[String]
 
 // ====================================================================
 //                              Text
@@ -106,17 +125,17 @@ extension (c: Console)
 private object _richText extends PyDynamic
 
 object Text:
-  def apply(text: String): Text                = rich.textFromPy(_richText.Text(text))
-  def apply(text: String, style: String): Text = rich.textFromPy(_richText.Text(text, style = style))
+  def apply(text: String): Text                = textFromPy(_richText.Text(text))
+  def apply(text: String, style: String): Text = textFromPy(_richText.Text(text, style = style))
   /** Parse rich markup such as `"[bold red]hi[/]"`. */
-  def fromMarkup(markup: String): Text         = rich.textFromPy(_richText.Text.from_markup(markup))
+  def fromMarkup(markup: String): Text         = textFromPy(_richText.Text.from_markup(markup))
 
 extension (t: Text)
-  def append(text: String): Text                = rich.textFromPy(rich.asPy(t).append(text))
-  def append(text: String, style: String): Text = rich.textFromPy(rich.asPy(t).append(text, style = style))
-  def stylize(style: String): Unit              = rich.asPy(t).stylize(style)
+  def append(text: String): Text                = textFromPy(asPy(t).append(text))
+  def append(text: String, style: String): Text = textFromPy(asPy(t).append(text, style = style))
+  def stylize(style: String): Unit              = asPy(t).stylize(style)
   def highlightRegex(regex: String, style: String): Unit =
-    rich.asPy(t).highlight_regex(regex, style)
+    asPy(t).highlight_regex(regex, style)
 
 // ====================================================================
 //                              Panel
@@ -127,9 +146,9 @@ private object _richPanel extends PyDynamic
 
 object Panel:
   def apply(renderable: Any): Panel =
-    rich.panelFromPy(_richPanel.Panel(renderable))
+    panelFromPy(_richPanel.Panel(renderable))
   def apply(renderable: Any, title: String): Panel =
-    rich.panelFromPy(_richPanel.Panel(renderable, title = title))
+    panelFromPy(_richPanel.Panel(renderable, title = title))
   /** Full kwarg form. Pass null for unset values. */
   def styled(
     renderable: Any,
@@ -140,7 +159,7 @@ object Panel:
     expand: Boolean = true,
     highlight: Boolean = false
   ): Panel =
-    rich.panelFromPy(_richPanel.Panel(
+    panelFromPy(_richPanel.Panel(
       renderable,
       title = title, subtitle = subtitle,
       style = style, border_style = borderStyle,
@@ -148,7 +167,7 @@ object Panel:
     ))
   /** Shrinks the panel to the renderable's width. */
   def fit(renderable: Any): Panel =
-    rich.panelFromPy(_richPanel.Panel.fit(renderable))
+    panelFromPy(_richPanel.Panel.fit(renderable))
 
 // ====================================================================
 //                              Table
@@ -160,14 +179,14 @@ private object _richTable extends PyDynamic
 object Table:
   /** Empty table; populate with `addColumn`. */
   def apply(): Table =
-    rich.tableFromPy(_richTable.Table())
+    tableFromPy(_richTable.Table())
   /** Headered table. */
   def apply(h0: String, h1: String): Table =
-    rich.tableFromPy(_richTable.Table(h0, h1))
+    tableFromPy(_richTable.Table(h0, h1))
   def apply(h0: String, h1: String, h2: String): Table =
-    rich.tableFromPy(_richTable.Table(h0, h1, h2))
+    tableFromPy(_richTable.Table(h0, h1, h2))
   def apply(h0: String, h1: String, h2: String, h3: String): Table =
-    rich.tableFromPy(_richTable.Table(h0, h1, h2, h3))
+    tableFromPy(_richTable.Table(h0, h1, h2, h3))
 
   def styled(
     title: String = null,
@@ -179,7 +198,7 @@ object Table:
     expand: Boolean = false,
     highlight: Boolean = false
   ): Table =
-    rich.tableFromPy(_richTable.Table(
+    tableFromPy(_richTable.Table(
       title = title, caption = caption,
       show_header = showHeader, show_footer = showFooter,
       show_edge = showEdge, show_lines = showLines,
@@ -187,20 +206,20 @@ object Table:
     ))
 
   /** Borderless grid (handy for laying out renderables). */
-  def grid(): Table = rich.tableFromPy(_richTable.Table.grid())
+  def grid(): Table = tableFromPy(_richTable.Table.grid())
 
 extension (t: Table)
-  def addColumn(header: String): Unit                       = rich.asPy(t).add_column(header)
-  def addColumn(header: String, justify: String): Unit      = rich.asPy(t).add_column(header, justify = justify)
+  def addColumn(header: String): Unit                       = asPy(t).add_column(header)
+  def addColumn(header: String, justify: String): Unit      = asPy(t).add_column(header, justify = justify)
   def addColumn(header: String, style: String, justify: String): Unit =
-    rich.asPy(t).add_column(header, style = style, justify = justify)
+    asPy(t).add_column(header, style = style, justify = justify)
 
-  def addRow(c0: Any): Unit                                     = rich.asPy(t).add_row(c0)
-  def addRow(c0: Any, c1: Any): Unit                            = rich.asPy(t).add_row(c0, c1)
-  def addRow(c0: Any, c1: Any, c2: Any): Unit                   = rich.asPy(t).add_row(c0, c1, c2)
-  def addRow(c0: Any, c1: Any, c2: Any, c3: Any): Unit          = rich.asPy(t).add_row(c0, c1, c2, c3)
-  def addRow(c0: Any, c1: Any, c2: Any, c3: Any, c4: Any): Unit = rich.asPy(t).add_row(c0, c1, c2, c3, c4)
-  def addSection(): Unit                                        = rich.asPy(t).add_section()
+  def addRow(c0: Any): Unit                                     = asPy(t).add_row(c0)
+  def addRow(c0: Any, c1: Any): Unit                            = asPy(t).add_row(c0, c1)
+  def addRow(c0: Any, c1: Any, c2: Any): Unit                   = asPy(t).add_row(c0, c1, c2)
+  def addRow(c0: Any, c1: Any, c2: Any, c3: Any): Unit          = asPy(t).add_row(c0, c1, c2, c3)
+  def addRow(c0: Any, c1: Any, c2: Any, c3: Any, c4: Any): Unit = asPy(t).add_row(c0, c1, c2, c3, c4)
+  def addSection(): Unit                                        = asPy(t).add_section()
 
 // ====================================================================
 //                              Tree
@@ -211,18 +230,18 @@ private object _richTree extends PyDynamic
 
 object Tree:
   def apply(label: Any): Tree =
-    rich.treeFromPy(_richTree.Tree(label))
+    treeFromPy(_richTree.Tree(label))
   def apply(label: Any, guideStyle: String): Tree =
-    rich.treeFromPy(_richTree.Tree(label, guide_style = guideStyle))
+    treeFromPy(_richTree.Tree(label, guide_style = guideStyle))
   /** Build a tree whose root is hidden — useful for forests. */
   def hidden(label: Any): Tree =
-    rich.treeFromPy(_richTree.Tree(label, hide_root = true))
+    treeFromPy(_richTree.Tree(label, hide_root = true))
 
 extension (t: Tree)
-  def add(label: Any): Tree                           = rich.treeFromPy(rich.asPy(t).add(label))
-  def add(label: Any, style: String): Tree            = rich.treeFromPy(rich.asPy(t).add(label, style = style))
+  def add(label: Any): Tree                           = treeFromPy(asPy(t).add(label))
+  def add(label: Any, style: String): Tree            = treeFromPy(asPy(t).add(label, style = style))
   def addStyled(label: Any, guideStyle: String): Tree =
-    rich.treeFromPy(rich.asPy(t).add(label, guide_style = guideStyle))
+    treeFromPy(asPy(t).add(label, guide_style = guideStyle))
 
 // ====================================================================
 //                              Rule
@@ -232,15 +251,15 @@ extension (t: Tree)
 private object _richRule extends PyDynamic
 
 object Rule:
-  def apply(): Rule              = rich.ruleFromPy(_richRule.Rule())
-  def apply(title: String): Rule = rich.ruleFromPy(_richRule.Rule(title))
+  def apply(): Rule              = ruleFromPy(_richRule.Rule())
+  def apply(title: String): Rule = ruleFromPy(_richRule.Rule(title))
   def styled(
     title: String,
     style: String = "rule.line",
     align: String = "center",
     characters: String = "─"
   ): Rule =
-    rich.ruleFromPy(_richRule.Rule(
+    ruleFromPy(_richRule.Rule(
       title, style = style, align = align, characters = characters))
 
 // ====================================================================
@@ -252,13 +271,13 @@ private object _richMarkdown extends PyDynamic
 
 object Markdown:
   def apply(markup: String): Markdown =
-    rich.markdownFromPy(_richMarkdown.Markdown(markup))
+    markdownFromPy(_richMarkdown.Markdown(markup))
   def styled(
     markup: String,
     codeTheme: String = "monokai",
     justify: String = "left"
   ): Markdown =
-    rich.markdownFromPy(_richMarkdown.Markdown(markup, code_theme = codeTheme, justify = justify))
+    markdownFromPy(_richMarkdown.Markdown(markup, code_theme = codeTheme, justify = justify))
 
 // ====================================================================
 //                              Syntax
@@ -269,7 +288,7 @@ private object _richSyntax extends PyDynamic
 
 object Syntax:
   def apply(code: String, lexer: String): Syntax =
-    rich.syntaxFromPy(_richSyntax.Syntax(code, lexer))
+    syntaxFromPy(_richSyntax.Syntax(code, lexer))
   def styled(
     code: String,
     lexer: String,
@@ -277,11 +296,11 @@ object Syntax:
     lineNumbers: Boolean = false,
     wordWrap: Boolean = false
   ): Syntax =
-    rich.syntaxFromPy(_richSyntax.Syntax(
+    syntaxFromPy(_richSyntax.Syntax(
       code, lexer,
       theme = theme, line_numbers = lineNumbers, word_wrap = wordWrap))
   def fromPath(path: String): Syntax =
-    rich.syntaxFromPy(_richSyntax.Syntax.from_path(path))
+    syntaxFromPy(_richSyntax.Syntax.from_path(path))
 
 // ====================================================================
 //                              Columns
@@ -291,12 +310,12 @@ object Syntax:
 private object _richColumns extends PyDynamic
 
 object Columns:
-  def apply(): Columns = rich.columnsFromPy(_richColumns.Columns())
+  def apply(): Columns = columnsFromPy(_richColumns.Columns())
   def apply(equal: Boolean, expand: Boolean): Columns =
-    rich.columnsFromPy(_richColumns.Columns(equal = equal, expand = expand))
+    columnsFromPy(_richColumns.Columns(equal = equal, expand = expand))
 
 extension (c: Columns)
-  def addRenderable(r: Any): Unit = rich.asPy(c).add_renderable(r)
+  def addRenderable(r: Any): Unit = asPy(c).add_renderable(r)
 
 // ====================================================================
 //                          Prompts & Confirm
@@ -320,13 +339,13 @@ object Prompts:
 private object _richProgress extends PyDynamic
 
 object Progress:
-  def apply(): Progress = rich.progressFromPy(_richProgress.Progress())
+  def apply(): Progress = progressFromPy(_richProgress.Progress())
 
 extension (p: Progress)
-  def start(): Unit                                       = rich.asPy(p).start()
-  def stop(): Unit                                        = rich.asPy(p).stop()
-  def refresh(): Unit                                     = rich.asPy(p).refresh()
-  def addTask(description: String): Int                   = rich.asPy(p).add_task(description).asInstanceOf[Int]
-  def addTask(description: String, total: Double): Int    = rich.asPy(p).add_task(description, total = total).asInstanceOf[Int]
-  def advance(taskId: Int, step: Double): Unit            = rich.asPy(p).advance(taskId, step)
-  def setProgress(taskId: Int, advance: Double): Unit     = rich.asPy(p).update(taskId, advance = advance)
+  def start(): Unit                                       = asPy(p).start()
+  def stop(): Unit                                        = asPy(p).stop()
+  def refresh(): Unit                                     = asPy(p).refresh()
+  def addTask(description: String): Int                   = asPy(p).add_task(description).asInstanceOf[Int]
+  def addTask(description: String, total: Double): Int    = asPy(p).add_task(description, total = total).asInstanceOf[Int]
+  def advance(taskId: Int, step: Double): Unit            = asPy(p).advance(taskId, step)
+  def setProgress(taskId: Int, advance: Double): Unit     = asPy(p).update(taskId, advance = advance)

@@ -17,6 +17,8 @@
 // `np`: `asPy: NDArray => PyDynamic` and `fromPy: PyDynamic => NDArray`,
 // each alias-transparent inside `np`.
 
+package numpy
+
 import scala.python.*
 
 // File-private extern surface, accessible to both `np` and the sibling
