@@ -1,7 +1,7 @@
 import numpy.*
 import rich.*
 
-@main def run(): Unit =
+@main def runNumpyTest(): Unit =
   val con = Console()
 
   rich.print(Text.fromMarkup("[bold magenta]Cappy + Rich + NumPy[/]"))

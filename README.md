@@ -10,7 +10,8 @@ An example of the Python backend of Scala 3 (named "Cappy").
 ## Running
 
 ```sh
-./cappy run src/main.scala
+./cappy run src/test-numpy.scala
+./cappy run src/test-rich.scala
 ```
 
 This will:
@@ -22,7 +23,8 @@ This will:
 
 ```
 src/
-  main.scala            -- entry @main, uses np.* and rich.*
+  test-numpy.scal       -- entry @main, exercises the numpy facade
+  test-rich.scala       -- entry @main, exercises the rich facade
   numpy/Facade.scala    -- package numpy: typed facade for numpy.ndarray
   rich/Facade.scala     -- package rich:  typed facade for the rich library
 cappy                   -- compile + run wrapper script
