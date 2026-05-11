@@ -4,10 +4,8 @@ An example of the Python backend of Scala (named "Cappy").
 
 ## Prerequisites
 
-- [`uv`](https://docs.astral.sh/uv/) — manages the Python environment
-  and runs the generated Python.
-- [`cs` (Coursier)](https://get-coursier.io/) — launches the `spc`
-  Scala-Py compiler from a remote channel on demand.
+- [`uv`](https://docs.astral.sh/uv/): manages the Python environment and runs the generated Python.
+- [`cs` (Coursier)](https://get-coursier.io/): launches the Scala 3 to Python compiler.
 
 ## Running
 
